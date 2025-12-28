@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+BIN="$HOME/.local/bin"
+REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+mkdir -p "$BIN"
+
+echo "== Linking scripts =="
+
+for f in "$REPO_DIR"/*; do
+  name="$(basename "$f")"
+
+  [[ -f "$f" ]] || continue
+
+  case "$name" in
+  README.md | setup)
+    continue
+    ;;
+  esac
+
+  [[ "$name" == wip-* ]] && continue
+  [[ -x "$f" ]] || continue
+
+  target="$BIN/$name"
+  ln -sf "$f" "$target"
+  echo "linked $name"
+done
+
+echo
+echo "== Cleaning broken symlinks =="
+
+for link in "$BIN"/*; do
+  [[ -L "$link" ]] || continue
+
+  target="$(readlink "$link")"
+
+  # only touch symlinks pointing into this repo
+  case "$target" in
+  "$REPO_DIR"/*)
+    [[ -e "$target" ]] || {
+      echo "removing broken link $(basename "$link")"
+      rm "$link"
+    }
+    ;;
+  esac
+done
+
+echo "Done."
