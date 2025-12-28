@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+echo This is '$0': $0
+echo
+echo This is 'dirname $0': $(dirname $0)
+echo
+echo As you might be able to see: '"dirname $0"' gives back the relative path of your CWD. That means if the script you\'re running is in your current folder you get a dot for the current folder.
