@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+
+newline=$'\n'
+
+get_help () {
+    cat <<'EOF'
+This script processes an fdupes output file and prints (if piped or redirected zero-byte terminated) paths that match a
+given pattern, while ensuring that at least one non-matching copy exists for each duplicate group.
+
+It is intended to help you identify files that can be safely deleted
+without removing all copies of a duplicate.
+
+IMPORTANT:
+  • This script DOES NOT delete files by itself.
+  • It prints file paths to stdout that are zero-byte terminated.
+  • You are expected to pipe or redirect the output.
+
+USAGE:
+  script-name --file INPUT --pattern REGEX
+
+OPTIONS:
+  --file INPUT
+      File produced by fdupes (e.g. fdupes -r > INPUT)
+
+  --pattern REGEX
+      Extended regular expression identifying files you intend to delete
+      (for example: a directory name or device-specific path)
+
+  --help
+      Show this help text and exit
+
+WORKFLOW (RECOMMENDED):
+  1. Run the script without piping and inspect the output:
+         script-name --file fdupes.txt --pattern 'samsung SM'
+
+  2. Once you are confident the output is correct, pipe it explicitly:
+         script-name --file fdupes.txt --pattern 'samsung SM' | less
+
+  3. Only then, if you really mean it:
+         script-name --file fdupes.txt --pattern 'samsung SM' | xargs -0 -r rm -v --
+
+NOTES:
+  • Always review the output before deleting anything.
+  • The use of `rm --` ensures filenames starting with '-' are handled safely.
+  • If the script aborts, it means a duplicate group would lose all copies.
+EOF
+}
+
+usage () {
+    echo "Usage: script-name --file INPUT --pattern REGEX"
+}
+
+print_tty() {
+    echo "$1"
+}
+
+print_pipe() {
+    printf '%s\0' "$1"
+}
+
+if [[ -t 1 ]]; then
+    print_line=print_tty
+else
+    print_line=print_pipe
+fi
+
+
+file=""
+pattern=""
+printit=""
+
+if [[ -t 1 ]]; then
+    printit=echo "$line"
+else
+    printf '%s\0' "$line"
+fi
+
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --file)
+            file=$2
+            shift 2
+            ;;
+        --pattern)
+            pattern=$2
+            shift 2
+            ;;
+        --help)
+            get_help
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+if [[ -z $file || -z $pattern ]]; then 
+    usage
+    exit 1
+fi
+
+
+if ! [[ -e $file ]]; then
+    echo "Error: File <$file> not found $1" 
+    exit 1
+fi
+
+file_in_pattern_location=0
+file_in_none_pattern_location=0
+
+while read -r line; do
+
+    if [[ $line =~ "$pattern" ]]; then
+        file_in_pattern_location=1 
+        $print_line "$line"
+    else 
+        file_in_none_pattern_location=1
+    fi
+
+    if [[ -z $line ]]; then 
+
+        if ! [[ $file_in_pattern_location -eq 1 &&  $file_in_none_pattern_location -eq 1 ]]; then 
+            echo "File $file does not exist in a non-pattern-matching directoy. You would delete all instances of it. Aborting now!"
+            exit 1
+        fi
+
+        file_in_pattern_location=0
+        file_in_none_pattern_location=0
+
+    fi
+done < "$file"
