@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Usage check
+if [ $# -ne 2 ]; then
+    echo "Usage: $0 user@host /path/to/public_key.pub"
+    exit 1
+fi
+
+REMOTE="$1"
+PUBKEY="$2"
+
+# Make sure the public key exists
+if [ ! -f "$PUBKEY" ]; then
+    echo "Public key not found: $PUBKEY"
+    exit 1
+fi
+
+# Read the key
+KEY=$(cat "$PUBKEY")
+
+echo "Sending public key to $REMOTE..."
+
+ssh "$REMOTE" "mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '$KEY' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+
+echo "Done."
+
