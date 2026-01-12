@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+find . -type d -name ".git" -prune | while read -r repo; do
+  repo_dir="$(dirname "$repo")"
+
+  url=$(git -C "$repo_dir" remote get-url origin 2>/dev/null)
+
+  if [[ "$url" =~ ^https://github.com/ ]]; then
+    ssh_url=$(echo "$url" | sed -E 's#https://github.com/#git@github.com:#')
+    git -C "$repo_dir" remote set-url origin "$ssh_url"
+    echo "✔ $repo_dir → $ssh_url"
+  fi
+done
