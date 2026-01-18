@@ -2,19 +2,18 @@
 
 # This script must be executed on the machine where the user is to notify
 
-USER="livia"
-UID=$(id -u "$USER")
+TARGET_USER="livia"
+USER_UID=$(id -u "$TARGET_USER")
 
 DISPLAY=":0"
-DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$UID/bus"
+DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$USER_UID/bus"
 
 if [ $# -eq 0 ]; then
-  echo "Usage: $0 <message> [body]"
+  echo "Usage: $0 <summary> [body]"
   exit 1
 fi
 
-sudo -u "$USER" \
+sudo -u "$TARGET_USER" \
   DISPLAY="$DISPLAY" \
   DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" \
   notify-send "$@"
-
