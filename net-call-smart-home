@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+# Check if at least one argument is given
+if [ "$#" -eq 0 ]; then
+  echo "Usage: $0 <your text here>"
+  exit 1
+fi
+
+# Join all arguments into one string
+TEXT="$*"
+
+# URL encode using jq
+ENCODED=$(printf '%s' "$TEXT" | jq -sRr @uri) >/dev/null
+
+# Send request
+curl "http://192.168.1.53:8087/set/0_userdata.0._GPTHandler?val=$ENCODED" >/dev/null

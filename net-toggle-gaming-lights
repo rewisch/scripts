@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+STATE_FILE="$HOME/.cache/gaming_lights_state"
+
+NET_CALL="$HOME/.local/bin/net-call-smart-home"
+
+ON_CMD="Turn on gaming lights"
+OFF_CMD="Turn off gaming lights"
+
+# Read current state
+if [[ -f "$STATE_FILE" ]] && [[ "$(cat "$STATE_FILE")" == "on" ]]; then
+  CMD="$OFF_CMD"
+  echo "off" >"$STATE_FILE"
+else
+  CMD="$ON_CMD"
+  echo "on" >"$STATE_FILE"
+fi
+
+# Call your existing script
+"$NET_CALL" "$CMD"

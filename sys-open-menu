@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+main_choice=$(printf "System\n" | rofi -dmenu -p "Menu")
+
+case "$main_choice" in
+  System)
+    system_choice=$(printf "Reboot\nShutdown\n" | rofi -dmenu -p "System")
+    case "$system_choice" in
+      Reboot)
+        systemctl reboot
+        ;;
+      Shutdown)
+        systemctl poweroff
+        ;;
+    esac
+    ;;
+  *)
+    exit 0
+    ;;
+esac

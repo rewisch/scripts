@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PW_FILE="./pw"
+WIFI_PW_FILE="./pw_ssid"
+
+usage() {
+  echo "Usage: $0 <boot_mount> <username> <wifi_ssid> [country]"
+  echo
+  echo "Example:"
+  echo "  $0 /mnt/boot pi MyWifi DE"
+  echo
+  echo "Requirements:"
+  echo "  - Login password in ./pw"
+  echo "  - WiFi password in ./pw_ssid"
+  echo "  - Boot partition mounted"
+  exit 1
+}
+
+# -----------------------------
+# Args
+# -----------------------------
+if [[ $# -lt 3 || $# -gt 4 ]]; then
+  usage
+fi
+
+BOOT="$1"
+USER="$2"
+SSID="$3"
+COUNTRY="${4:-US}"
+
+# -----------------------------
+# Basic checks
+# -----------------------------
+if [[ ! -d "$BOOT" ]]; then
+  echo "Error: Boot path not found: $BOOT"
+  exit 2
+fi
+
+if [[ ! -f "$PW_FILE" ]]; then
+  echo "Error: Login password file '$PW_FILE' not found."
+  echo "Create it with:"
+  echo "  echo 'yourpassword' > pw"
+  exit 3
+fi
+
+if [[ ! -f "$WIFI_PW_FILE" ]]; then
+  echo "Error: WiFi password file '$WIFI_PW_FILE' not found."
+  echo "Create it with:"
+  echo "  echo 'your_wifi_password' > pw_ssid"
+  exit 4
+fi
+
+LOGIN_PW="$(cat "$PW_FILE")"
+WIFI_PW="$(cat "$WIFI_PW_FILE")"
+
+if [[ -z "$LOGIN_PW" || -z "$WIFI_PW" ]]; then
+  echo "Error: pw or pw_ssid is empty."
+  exit 5
+fi
+
+# -----------------------------
+# Hash login password
+# -----------------------------
+HASH="$(openssl passwd -6 "$LOGIN_PW")"
+
+echo "Deploying configuration..."
+
+# -----------------------------
+# Create user
+# -----------------------------
+echo "→ Creating userconf"
+echo "$USER:$HASH" | sudo tee "$BOOT/userconf" >/dev/null
+
+# -----------------------------
+# Enable SSH
+# -----------------------------
+echo "→ Enabling SSH"
+sudo touch "$BOOT/ssh"
+
+# -----------------------------
+# Prepare .ssh directory
+# -----------------------------
+sudo mkdir -p "$BOOT/.ssh"
+sudo chown 1000:1000 "$BOOT/.ssh" 2>/dev/null || true
+
+# -----------------------------
+# WiFi config
+# -----------------------------
+echo "→ Writing WiFi configuration"
+
+sudo tee "$BOOT/wpa_supplicant.conf" >/dev/null <<EOF
+country=$COUNTRY
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+
+network={
+    ssid="$SSID"
+    psk="$WIFI_PW"
+}
+EOF
+
+echo
+echo "Done."
+echo "User      : $USER"
+echo "WiFi SSID : $SSID"
+echo "Country   : $COUNTRY"
+echo
+echo "You can now unmount and boot the Pi."
